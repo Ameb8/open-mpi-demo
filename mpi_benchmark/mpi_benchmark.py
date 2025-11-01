@@ -4,25 +4,32 @@ from pathlib import Path
 import subprocess
 import argparse
 
+# Path to compilation target directory
+BIN_DIR: Path = Path(__file__).parent.parent / "bin"
 
-def compile_c_file(filepath):
-    # Get the base name without extension
-    exe_name = os.path.splitext(os.path.basename(filepath))[0]
-    
-    # Compile the C file with mpicc
-    print(f"Compiling {filepath} -> {exe_name}")
-    result = subprocess.run(['mpicc', filepath, '-o', exe_name])
-    
-    if result.returncode != 0:
-        print("Compilation failed!")
-        sys.exit(1)
-    
-    return exe_name
+
+def mpicc_compile(src_path: Path, target_path: Path, args: list[str]) -> bool:
+    # Define compilation command
+    command: list[str] = ['mpicc', str(src_path), '-o', str(target_path), *[f'-{arg}' for arg in args]]
+    print(f'\nCompiling {src_path} with:\n{command}\n')
+
+    # Compile source code with mpicc
+    result = subprocess.run(
+        command,
+        capture_output=True,
+        text=True
+    )
+
+    # Display compilation results
+    print(f'Results:\n{result.stdout}\n{result.stderr}\n')
+
+    return result.returncode == 0
+
 
 def mpicc_benchmark(exe_path: Path, num_processes: int, args: list[str]) -> float:
     # Execute program as subprocess
     result = subprocess.run(
-        ['mpirun', '-np', f'-{num_processes}', str(exe_path), *args],
+        ['mpirun', '-np', f'{num_processes}', str(exe_path), *args],
         capture_output=True,
         text=True
     )
@@ -30,15 +37,18 @@ def mpicc_benchmark(exe_path: Path, num_processes: int, args: list[str]) -> floa
     # Return last word from program execution stdout as wall-clock benchmark time
     return float(' '.split(result.stdout)[-1])
 
-def mpicc_compile(src_path: Path, target_path: Path, args: list[str]) -> bool:
-    # Ccompile source code with mpicc
-    result = subprocess.run(
-        [],
-        capture_output=True,
-        text=True
-    )
 
-    return result.returncode == 0
+def run_benchmark(src_path: Path, processes: list[int], prgm_args: list[str], mpicc_args) -> list[float]:
+    # Define path to executable target
+    target_path: Path = BIN_DIR / str(src_path).split('.')[-2]
+
+    # Compile Program
+    if not mpicc_compile(src_path, target_path, mpicc_args):
+        return [] # Compilation failed
+    
+    # Return list of bencchmark results for each process amount
+    return [mpicc_benchmark(target_path, p, prgm_args) for p in processes]
+
         
 def main():
     # Create parse for program arguments
@@ -47,11 +57,11 @@ def main():
     )
 
     # Define program arguments
-    parser.addd_argument('prgm_path', help='Path to MPI source code')
+    parser.add_argument('prgm_path', help='Path to MPI source code')
     parser.add_argument('prgm_flags', nargs='*', help='Command line arguments for MPI program')
 
     parser.add_argument( # Compialtion flags for mpicc
-        '-cf', '--mpicc-flags', nargs='*', default=["-O3"], 
+        '-cf', '--mpicc-flags', nargs='*', default=['O3', 'Wall', 'Wextra'], 
         help='Compilation flags for mpicc (default: empty list)'
     )
 
@@ -70,18 +80,9 @@ def main():
     mpicc_flags: list[str] | None = args.mpicc_flags
     processes: list[int] | None = args.processes
 
-    if len(sys.argv) != 2:
-        print("Usage: python3 run_mpi.py <path_to_c_file>")
-        sys.exit(1)
-    
-    filepath = sys.argv[1]
-    
-    if not os.path.isfile(filepath):
-        print(f"File {filepath} does not exist.")
-        sys.exit(1)
-    
-    exe_name = compile_c_file(filepath)
-    run_mpi_program(exe_name)
+    benchmark_results: list[float] = run_benchmark(prgm_path, processes, prgm_flags, mpicc_flags)
+
+    print(f"Processess:\t\t{processes}\nResults:\t\t{benchmark_results}")
 
 if __name__ == "__main__":
     main()

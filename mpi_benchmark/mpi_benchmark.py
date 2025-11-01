@@ -5,9 +5,14 @@ import subprocess
 import argparse
 import statistics
 
+import matplotlib.pyplot as plt
+
 
 # Path to compilation target directory
 BIN_DIR: Path = Path(__file__).parent.parent / "bin"
+
+# Path to directory to store benchmark plots
+PLOT_DIR: Path = Path(__file__).parent.parent / "plots"
 
 
 def mpicc_compile(src_path: Path, target_path: Path, args: list[str]) -> bool:
@@ -66,6 +71,17 @@ def run_benchmark(src_path: Path, processes: list[int], prgm_args: list[str], mp
 
     return avg
 
+def plot_benchmark(processes: list[int], exec_times: list[float], prgm_name: str) -> None:
+    plot_path: Path = PLOT_DIR / f'{prgm_name}_benchmark_results.png'
+    plt.plot(processes, exec_times, marker='o')
+
+    plt.xlabel('Average Execution Time (s)')
+    plt.ylabel('Number of Processes')
+
+    plt.title(f'MPI Benchmark of {prgm_name}')
+    plt.grid(True)
+    plt.savefig(plot_path, dpi=300, bbox_inches='tight')
+
         
 def main():
     # Create parse for program arguments
@@ -102,7 +118,9 @@ def main():
     benchmark_results: list[float] = run_benchmark(prgm_path, processes, prgm_flags, mpicc_flags)
 
     # Print results
-    print(f"Processess:\t\t{processes}\nResults:\t\t{benchmark_results}")
+    print(f"Processes:\t\t{processes}\nResults:\t\t{benchmark_results}")
+
+    plot_benchmark(processes, benchmark_results, prgm_path.name)
 
 if __name__ == "__main__":
     main()

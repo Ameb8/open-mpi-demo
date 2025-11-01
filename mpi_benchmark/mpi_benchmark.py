@@ -3,6 +3,8 @@
 from pathlib import Path
 import subprocess
 import argparse
+import statistics
+
 
 # Path to compilation target directory
 BIN_DIR: Path = Path(__file__).parent.parent / "bin"
@@ -27,15 +29,24 @@ def mpicc_compile(src_path: Path, target_path: Path, args: list[str]) -> bool:
 
 
 def mpicc_benchmark(exe_path: Path, num_processes: int, args: list[str]) -> float:
+    # Define and display execution command
+    command: list[str] = ['mpirun', '--oversubscribe', '-np', f'{num_processes}', str(exe_path), *args]
+    print(f'Executing mpicc benchmark with {command}')
+    
     # Execute program as subprocess
     result = subprocess.run(
-        ['mpirun', '-np', f'{num_processes}', str(exe_path), *args],
+        command,
         capture_output=True,
         text=True
     )
 
+    print(f'Errors: {result.stderr}')
+    print(result.stdout.split(' ')[-1])
+    print(float(result.stdout.split(' ')[-1]))
+
     # Return last word from program execution stdout as wall-clock benchmark time
-    return float(' '.split(result.stdout)[-1])
+    #return float(' '.split(result.stdout)[-1])
+    return float(result.stdout.split(' ')[-1])
 
 
 def run_benchmark(src_path: Path, processes: list[int], prgm_args: list[str], mpicc_args) -> list[float]:
@@ -46,8 +57,14 @@ def run_benchmark(src_path: Path, processes: list[int], prgm_args: list[str], mp
     if not mpicc_compile(src_path, target_path, mpicc_args):
         return [] # Compilation failed
     
-    # Return list of bencchmark results for each process amount
-    return [mpicc_benchmark(target_path, p, prgm_args) for p in processes]
+    avg: list[float] = [] # Holds result of each run with p for averaging
+
+    for p in processes: # Return list of benchmark results for each process amount
+        # Benchmark average runtime
+        runtimes: list[float] = [mpicc_benchmark(target_path, p, prgm_args) for _ in range(5)]
+        avg.append(statistics.mean(runtimes)) # Take average of 5 runs
+
+    return avg
 
         
 def main():
@@ -75,13 +92,16 @@ def main():
 
     args: argparse.Namepsace = parser.parse_args() # Parse arguments
 
+    # Extract command line args as variables
     prgm_path: Path = Path(args.prgm_path)
     prgm_flags: list[str] = args.prgm_flags
     mpicc_flags: list[str] | None = args.mpicc_flags
     processes: list[int] | None = args.processes
 
+    # Get benchmark results
     benchmark_results: list[float] = run_benchmark(prgm_path, processes, prgm_flags, mpicc_flags)
 
+    # Print results
     print(f"Processess:\t\t{processes}\nResults:\t\t{benchmark_results}")
 
 if __name__ == "__main__":

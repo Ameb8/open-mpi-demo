@@ -5,7 +5,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "mpi.h"
+ #include "mpi.h"
 #include <math.h>
 
 #define MIN(a,b)  ((a)<(b)?(a):(b))

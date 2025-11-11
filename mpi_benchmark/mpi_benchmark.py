@@ -39,7 +39,7 @@ def mpicc_compile(src_path: Path, target_path: Path, args: list[str]) -> bool:
 
 def mpicc_benchmark(exe_path: Path, num_processes: int, args: list[str]) -> float:
     # Define and display execution command
-    command: list[str] = ['mpirun', '--oversubscribe', '-np', f'{num_processes}', str(exe_path), *args]
+    command: list[str] = ['mpiexec', '--oversubscribe', '-np', f'{num_processes}', str(exe_path), *args]
     print(f'Executing mpicc benchmark with {command}')
     
     # Execute program as subprocess
@@ -49,9 +49,8 @@ def mpicc_benchmark(exe_path: Path, num_processes: int, args: list[str]) -> floa
         text=True
     )
 
-    print(f'Errors: {result.stderr}')
-    print(result.stdout.split(' ')[-1])
-    print(float(result.stdout.split(' ')[-1]))
+    # Display execution output
+    print(f'Results:\n{result.stdout}\n{result.stderr}\n')
 
     # Return last word from program execution stdout as wall-clock benchmark time
     return float(result.stdout.split(' ')[-1])
@@ -64,7 +63,7 @@ def basic_pred_runtime(processes: list[int], exe_path: Path, args: list[str]) ->
 
 def run_benchmark(src_path: Path, processes: list[int], prgm_args: list[str], mpicc_args) -> tuple[list[float], list[float]]:
     # Define path to executable target
-    target_path: Path = BIN_DIR / str(src_path).split('.')[-2]
+    target_path: Path = BIN_DIR / src_path.stem
 
     # Compile Program
     if not mpicc_compile(src_path, target_path, mpicc_args):

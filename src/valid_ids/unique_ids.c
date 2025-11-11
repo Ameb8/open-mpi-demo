@@ -7,6 +7,7 @@
 
 #define MAX_COMBINATIONS 1000000
 #define DIVISOR 100000
+#define MIN_ID 100000
 
 #define NUM_ID_MSG "\nThere are %d valid 6-digit combinations"
 #define BENCHMARK_MSG "\nComputation time with %d processes (seconds): %10.6f\n"
@@ -19,8 +20,6 @@ bool validateId(int id) {
     int digitSum = 0; // Tracks sum of ID digits
     int lastDigit = -1;
 
-    if(id / divisor == 0) // Check if leading digit is zero
-        return false;
 
     while(divisor > 0) { // Iterate through ID digits
         int digit = id / divisor; // Calculate next digit
@@ -59,9 +58,9 @@ int main(int argc, char* argv[]) {
         processValidIds += validateId(i);
 
     // Accumulate total valid IDs across processes
-    MPI_Reduce(&processValidIds, &totalValidIds, p, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD);
+    MPI_Reduce(&processValidIds, &totalValidIds, 1, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD);
     
-    MPI_Barrier(MPI_COMM_WORLD); // Wait for all processes to complete
+    //MPI_Barrier(MPI_COMM_WORLD); // Wait for all processes to complete
 
     elapsedTime += MPI_Wtime(); // End benchmark time
 

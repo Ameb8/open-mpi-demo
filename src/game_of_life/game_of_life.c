@@ -11,11 +11,15 @@
 
 
 typedef struct {
+    // Top left corner
     int xStart;
     int yStart;
-    int xEnd;
-    int yEnd;
+    
+    // Dimensions
+    int rows;
+    int cols;
 } SubSquare;
+
 
 static inline void factor(int n, int* x, int* y) {
     *y = (int) sqrt((double) n); // Set y as floor of square root of n
@@ -27,14 +31,45 @@ static inline void factor(int n, int* x, int* y) {
 }
 
 
+static inline int getTrueIndex(int subSize, int subBalance, int subIndex) {
+    // Assume all lesser sub grids are padded
+    int boardIndex = subIndex * (subSize + 1);
+
+    if(subIndex > subBalance) // Account for non-padded sub grids
+        boardIndex -= subIndex - subBalance;
+
+    return boardIndex;
+}
+
+
+// Calculate location and size of sub grid for a given process
+// Assigns results to fields of SubSquare struct argument
 void subSquareBounds(int width, int height, int n, int i, SubSquare* sqr) {
-    // Holds sub grid size
-    int rowWidth;
-    int colWidth;
+    if(!sqr) return; // Validate inputs
 
-    factor(n, &rowWidth, &colWidth); // Determine size of sub grid
+    int numSubRows, numSubCols;
 
+    factor(n, &numSubRows, &numSubCols); // Determine size of sub grid
 
+    // Calculate base dimensions of sub grids
+    sqr->cols = width / numSubRows;
+    sqr->rows = height / numSubCols;
+
+    // Calculate number of sub grids with base dimension + 1
+    int bigWidth = width * n;
+    int bigHeight = height % n;
+
+    // Get index within grid of sub square
+    int subRow = i % numSubRows;
+    int subCol = i % numSubCols;
+
+    // Calculate coordinate of sub grid top left
+    sqr->xStart = getTrueIndex(sqr->rows, bigHeight, subRow);
+    sqr->yStart = getTrueIndex(sqr->cols, bigWidth, subCol);
+
+    // Increment sub grid size if padded
+    if(subRow <= bigHeight) sqr->rows++;
+    if(subCol <= bigWidth) sqr->cols++;
 }
 
 
@@ -57,19 +92,13 @@ int main(int argc, char* argv[]) {
 
     MPI_Barrier(MPI_COMM_WORLD); // Wait for processes
     elapsedTime = -MPI_Wtime(); // Start benchmark time
-    
-    // Calculate start row
-    // Calculate end row
 
-    // Calculate sub board width
-    // Calculate sub board height
+    // Calculate location and size of sub square to process
+    SubSquare subSqr;
+    subSquareBounds(BOARD_WIDTH, BOARD_HEIGHT, p, id, &subSqr);
 
-    // Calculate enum neighbor cells
 
-    // Calculat eneighbors
 
-    // Create pointer to sub board
-    // Create board of cells neighbors
 
     // Iterate through turns
     for(int i = 0; i < turns; i++) {

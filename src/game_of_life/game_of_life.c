@@ -97,6 +97,37 @@ int main(int argc, char* argv[]) {
     SubSquare subSqr;
     subSquareBounds(BOARD_WIDTH, BOARD_HEIGHT, p, id, &subSqr);
 
+    // Calculate number of neighbors
+    int numNeighbors = 4;
+
+    // Create buffer to hold updated cells
+    int numUpdated = 0;
+    //int updatedCells = malloc();
+    
+    // Iterate through turns
+    for(int i = 0; i < turns; i++) {
+        // Iterate through update cells
+            // Update living neighbor count
+    
+        // Send done message to neighbors
+
+        int doneNeighbors = 0;
+        numUpdated = 0;
+
+        // Read messages until all neighbors done and receive buffer empty
+        //while(doneNeighbors < numNeighbors) {
+            // Receive message
+
+            // if message done
+                doneNeighbors++;
+            // else // Process neighbor subsquare update
+                // Update living neighbor count
+        //}
+
+        
+        // Iterate
+    }
+
 
 
 
@@ -131,9 +162,7 @@ int main(int argc, char* argv[]) {
 
 
 
-    // Clean up MPI environment
-
-    if(!id) {
+    if(!id) { // Clean up MPI environment
         printf("Results:");
     }
 

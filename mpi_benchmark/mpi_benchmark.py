@@ -56,8 +56,7 @@ def mpicc_benchmark(exe_path: Path, num_processes: int, args: list[str]) -> floa
     return float(result.stdout.split(' ')[-1])
 
 
-def basic_pred_runtime(processes: list[int], exe_path: Path, args: list[str]) -> list[float]:
-    base_time: float = mpicc_benchmark(exe_path, 1, args)
+def basic_pred_runtime(processes: list[int], base_time: float) -> list[float]:
     return [base_time / p for p in processes]
 
 
@@ -76,7 +75,7 @@ def run_benchmark(src_path: Path, processes: list[int], prgm_args: list[str], mp
         runtimes: list[float] = [mpicc_benchmark(target_path, p, prgm_args) for _ in range(5)]
         avg.append(statistics.mean(runtimes)) # Take average of 5 runs
 
-    return (avg, basic_pred_runtime(processes, target_path, prgm_args))
+    return (avg, basic_pred_runtime(processes, avg[0]))
 
 
 def plot_benchmark(

@@ -54,7 +54,7 @@ int main(int argc, char* argv[]) {
     elapsedTime = -MPI_Wtime(); // Start benchmark time
 
     // Iterate through all combinations divisible by process rank
-    for(int i = id; i < MAX_COMBINATIONS; i += p)
+    for(int i = id + MIN_ID; i < MAX_COMBINATIONS; i += p)
         processValidIds += validateId(i);
 
     // Accumulate total valid IDs across processes

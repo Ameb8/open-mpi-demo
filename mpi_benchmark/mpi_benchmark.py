@@ -39,7 +39,7 @@ def mpicc_compile(src_path: Path, target_path: Path, args: list[str]) -> bool:
 
 def mpicc_benchmark(exe_path: Path, num_processes: int, args: list[str]) -> float:
     # Define and display execution command
-    command: list[str] = ['mpiexec', '--oversubscribe', '--map-by core', '--bind-to core', '-np', f'{num_processes}', str(exe_path), *args]
+    command: list[str] = ['mpiexec', '--oversubscribe', '-np', f'{num_processes}', str(exe_path), *args]
     print(f'Executing mpicc benchmark with {command}')
     
     # Execute program as subprocess

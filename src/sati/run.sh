@@ -6,4 +6,4 @@ SRC_DIR="src"
 
 # Execute benchmark
 echo -e "\nRunning Satisfiabilty problem SATI.c"
-python3 -m "$MODULE_NAME" "$SRC_DIR/sati/SATI.c" "$n" -t
+python3 -m "$MODULE_NAME" "$SRC_DIR/sati/SATI.c" --args "$n" -t

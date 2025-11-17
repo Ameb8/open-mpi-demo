@@ -39,7 +39,7 @@ def mpicc_compile(src_path: Path, target_path: Path, args: list[str]) -> bool:
 
 def mpicc_benchmark(exe_path: Path, num_processes: int, args: list[str]) -> float:
     # Define and display execution command
-    command: list[str] = ['mpiexec', '--oversubscribe', '-np', f'{num_processes}', str(exe_path), *args]
+    command: list[str] = ['mpiexec', '--oversubscribe', '--map-by core', '--bind-to core', '-np', f'{num_processes}', str(exe_path), *args]
     print(f'Executing mpicc benchmark with {command}')
     
     # Execute program as subprocess
@@ -104,19 +104,50 @@ def predict_runtime(p: int, m: int, n: int, x: float) -> float:
 def theoretical_runtimes(processes: list[int], m: int, n: int, x: float) -> list[float]:
     return [predict_runtime(p, m, n, x) for p in processes]
 
+
+def plot_benchmark_multi(results: dict, processes: list[int], include_theoretical: bool):
+    plt.figure()
+
+    for prgm_name, (exec_times, theoretical_times) in results.items():
+        plt.plot(processes, exec_times, marker='o', label=f'{prgm_name} Measured')
+        if include_theoretical and theoretical_times:
+            plt.plot(processes, theoretical_times, marker='x', label=f'{prgm_name} Theoretical')
+
+    plt.xlabel('Number of Processes')
+    plt.ylabel('Average Execution Time (s)')
+    plt.title('MPI Benchmark Comparison')
+    plt.grid(True)
+    plt.legend()
+
+    plot_path = PLOT_DIR / "combined_benchmark_results.png"
+    plt.savefig(plot_path, dpi=300, bbox_inches='tight')
+    print(f"Saved combined plot to {plot_path}")
+
         
 def main():
     # Create parse for program arguments
-    parser: argeparse.ArgumentParser = argparse.ArgumentParser(
+    parser: argparse.ArgumentParser = argparse.ArgumentParser(
         description="CLI for Benchmarking OpenMPI Programs"
     )
 
     # Define program arguments
-    parser.add_argument('prgm_path', help='Path to MPI source code')
-    parser.add_argument('prgm_flags', nargs='*', help='Command line arguments for MPI program')
+    parser.add_argument(
+        'prgm_paths', 
+        nargs='+', 
+        help='Path to MPI source code'
+    )
+
+    parser.add_argument( # Flags for program execution
+        '--args', 
+        nargs='*', 
+        help='Command line arguments for MPI program'
+    )
 
     parser.add_argument( # Compilation flags for mpicc
-        '-cf', '--mpicc-flags', nargs='*', default=['O3', 'Wall', 'Wextra'], 
+        '-cf', 
+        '--mpicc-flags', 
+        nargs='*', 
+        default=['O3', 'Wall', 'Wextra'], 
         help='Compilation flags for mpicc (default: -O3, -Wall, -Wextra)'
     )
 
@@ -137,23 +168,25 @@ def main():
     args: argparse.Namespace = parser.parse_args() # Parse arguments
 
     # Extract command line args as variables
-    prgm_path: Path = Path(args.prgm_path)
-    prgm_flags: list[str] = args.prgm_flags
+    prgm_paths: list[Path] = [Path(p) for p in args.prgm_paths]
+    prgm_flags: list[str] = args.args or []
     mpicc_flags: list[str] | None = args.mpicc_flags
     processes: list[int] | None = args.processes
     include_theoretical: bool = args.theoretical
 
-    # Get benchmark results
-    benchmark_results, pred_results = run_benchmark(prgm_path, processes, prgm_flags, mpicc_flags)
+    # Maps program name to real and theoretical benchmark results
+    results: dict[str, tuple(list[float], list[float])] = {}
 
+    # Get benchmark results
+    for path in prgm_paths:
+        benchmark_results, pred_results = run_benchmark(path, processes, prgm_flags, mpicc_flags)
+        results[path.stem] = (benchmark_results, pred_results)
+                          
     # Print results
     print(f"Processes:\t\t{processes}\nResults:\t\t{benchmark_results}\nPredicted Results:\t\t{pred_results}")
 
-
-    if include_theoretical:
-        plot_benchmark(processes, benchmark_results, prgm_path.name, pred_results)
-    else:
-        plot_benchmark(processes, benchmark_results, prgm_path.name)
+    # Create plot
+    plot_benchmark_multi(results, processes, include_theoretical)
 
 if __name__ == "__main__":
     main()

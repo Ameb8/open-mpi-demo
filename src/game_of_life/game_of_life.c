@@ -9,6 +9,9 @@
 #define BOARD_WIDTH 5
 #define BOARD_HEIGHT 5
 
+#define IN_BOARD(row, col, width, height) row >= 0 && col >= 0 && row < height && col < width
+#define IS_ALIVE(isLiving, liveNeighbors) (isLiving && (liveNeighbors == 3 || liveNeighbors == 2)) || (!isLiving && liveNeighbors == 3)
+
 
 typedef struct {
     // Top left corner
@@ -20,9 +23,25 @@ typedef struct {
     int cols;
 } SubSquare;
 
+bool** boolGrid(int rows, int cols) {
+    bool** grid = malloc(rows * sizeof(bool*));
+    
+    for(int i = 0; i < cols; i++)
+        grid[i] = malloc(cols * sizeof(bool));
+
+    return grid;
+}
+
 
 void subSquarePrint(SubSquare* grid, int id) {
     printf("\n\nPROCESS %d:\tSTART: (%d, %d)\tSIZE: (%d x %d)\n", id, grid->xStart, grid->yStart, grid->rows, grid->cols);
+}
+
+static inline void zeroGrid(bool** grid, int rows, int cols) {
+    for(int i = 0; i < rows; i++) {
+        for(int j = 0; j < cols; j++)
+            grid[i][j] = false;
+    }
 }
 
 
@@ -79,6 +98,9 @@ void subSquareBounds(int width, int height, int n, int i, SubSquare* sqr) {
 
 
 
+
+
+
 int main(int argc, char* argv[]) {
     int id, p; // Process id and number of MPI processes
     double elapsedTime; // Tracks wall-clock execution time
@@ -104,16 +126,41 @@ int main(int argc, char* argv[]) {
 
     // DEBUG ***
     subSquarePrint(&subSqr, id);
-
-    // Allocate new sub grid with 1 cell border
+    
     // Initialize sub grid to full game board state
-    // Allocate 'next' sub grid with 1 cell border (do not initialize)
+    bool** subGrid = boolGrid(subSqr.rows + 2, subSqr.cols + 2);
 
-    // Create subgrid int array (with border) to track cell counts
+    // Initialize subgrid with real board state
+    for(int i = -1; i < subSqr.rows + 1; i++) {
+        int actualRow = subSqr.yStart + i;
+
+        for(int j = -1; j < subSqr.cols + 1; j++) {
+            int actualCol = subSqr.xStart + j;
+
+            if(IN_BOUNDS(actualRow, actualCol, BOARD_WIDTH, BOARD_HEIGHT)) {
+                subGrid[i+1][j+1] = board[actualRow][actualCol];
+            } else {
+                subGrid[i+1][j+1] = false;
+            }
+        }
+    }
+
+    // Allocate 'next' sub grid with 1 cell border (do not initialize)
+    bool** next = boolGrid(subSqr.rows + 2, subSqr.cols + 2);
+
+
+    // Create sub grid int array (with border) to track living neighbor cell counts
+    int** neighborCounts = malloc((subSqr.rows + 2) * sizeof(int*));
+    
+    for(int i = 0; i < subSqr.rows + 2; i++) { // Init rows of neighbor count to zero
+        neighborCounts[i] = calloc(subSqr.cols + 2, sizeof(int));
+    }
+
 
     // Iterate through turns
     for(int i = 0; i < turns; i++) {
-        // Set all elements in enighborCount to zero
+        // Set all elements in neighborCount to zero
+        zeroGrid(neighborCounts, subSqr.rows, subSqr.cols);
 
         // Post non-blocking receives for all border halos from neighbor
 
@@ -122,18 +169,24 @@ int main(int argc, char* argv[]) {
         // update subgrid border rows when messages received
 
         // iterate through non-border cells of halo in sub grid
-            // If cell is active
-                // increment neighbor count locally only including border counts
+        for(int i = 2; i < subSqr.rows - 2; i++) {
+            for(int j = 2; j < subSqr.cols - 2; j++) {
+                if(subGrid[i][j]) // If cell is active, increment local neighbor counts
+                    updateNeighbors(neighborCounts, i, j, subSqr.rows, subSqr.cols);
+            }
+        }
+            
+        // Update status of non-halo bordering cells
+        for(int i = 2; i < subSqr.rows - 2; i++) {
+            for(int j = 2; j < subSqr.cols; j++) {
+                if(IS_ALIVE(subGrid[i][j], neighborCounts[i][j]))
+                    next[i][j] = true;
+                else
+                    next[i][j] = false;
 
+            }
+        }
 
-        // iterate through sub grid cells not bordering halo
-            // If cell is alive:
-                // Dies if neighbor count < 2 or > 3
-                // Lives if neighbor count == 2 or 3
-            // If cell is dead:
-                // Becomes alive if neighbor count == 3
-
-            // Apply results to 'next' array
 
         // wait for all halo messages
 

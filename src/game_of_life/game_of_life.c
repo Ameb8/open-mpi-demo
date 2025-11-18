@@ -21,10 +21,15 @@ typedef struct {
 } SubSquare;
 
 
+void subSquarePrint(SubSquare* grid, int id) {
+    printf("\n\nPROCESS %d:\tSTART: (%d, %d)\tSIZE: (%d x %d)\n", id, grid->xStart, grid->yStart, grid->rows, grid->cols);
+}
+
+
 static inline void factor(int n, int* x, int* y) {
     *y = (int) sqrt((double) n); // Set y as floor of square root of n
 
-    while(n % *y && y > 1) // Decrement y to divide n
+    while(n % *y && *y > 1) // Decrement y to divide n
         (*y)--;
     
     *x = (n + *y - 1) / *y; // Set x as ceiling of n / y
@@ -52,24 +57,24 @@ void subSquareBounds(int width, int height, int n, int i, SubSquare* sqr) {
     factor(n, &numSubRows, &numSubCols); // Determine size of sub grid
 
     // Calculate base dimensions of sub grids
-    sqr->cols = width / numSubRows;
-    sqr->rows = height / numSubCols;
+    sqr->rows = height / numSubRows;
+    sqr->cols = width / numSubCols;
 
     // Calculate number of sub grids with base dimension + 1
-    int bigWidth = width * n;
-    int bigHeight = height % n;
+    int bigCols = width % numSubCols;
+    int bigRows = height % numSubRows;
 
     // Get index within grid of sub square
-    int subRow = i % numSubRows;
+    int subRow = i / numSubCols;
     int subCol = i % numSubCols;
 
     // Calculate coordinate of sub grid top left
-    sqr->xStart = getTrueIndex(sqr->rows, bigHeight, subRow);
-    sqr->yStart = getTrueIndex(sqr->cols, bigWidth, subCol);
+    sqr->yStart = getTrueIndex(sqr->rows, bigRows, subRow);
+    sqr->xStart = getTrueIndex(sqr->cols, bigCols, subCol);
 
     // Increment sub grid size if padded
-    if(subRow <= bigHeight) sqr->rows++;
-    if(subCol <= bigWidth) sqr->cols++;
+    if(subRow < bigRows) sqr->rows++;
+    if(subCol < bigCols) sqr->cols++;
 }
 
 
@@ -97,74 +102,60 @@ int main(int argc, char* argv[]) {
     SubSquare subSqr;
     subSquareBounds(BOARD_WIDTH, BOARD_HEIGHT, p, id, &subSqr);
 
-    // Calculate number of neighbors
-    int numNeighbors = 4;
+    // DEBUG ***
+    subSquarePrint(&subSqr, id);
 
-    // Create buffer to hold updated cells
-    int numUpdated = 0;
-    //int updatedCells = malloc();
-    
-    // Iterate through turns
-    for(int i = 0; i < turns; i++) {
-        // Iterate through update cells
-            // Update living neighbor count
-    
-        // Send done message to neighbors
+    // Allocate new sub grid with 1 cell border
+    // Initialize sub grid to full game board state
+    // Allocate 'next' sub grid with 1 cell border (do not initialize)
 
-        int doneNeighbors = 0;
-        numUpdated = 0;
-
-        // Read messages until all neighbors done and receive buffer empty
-        //while(doneNeighbors < numNeighbors) {
-            // Receive message
-
-            // if message done
-                doneNeighbors++;
-            // else // Process neighbor subsquare update
-                // Update living neighbor count
-        //}
-
-        
-        // Iterate
-    }
-
-
-
+    // Create subgrid int array (with border) to track cell counts
 
     // Iterate through turns
     for(int i = 0; i < turns; i++) {
-        // Iterate through sub board positions
+        // Set all elements in enighborCount to zero
 
-            // if alive
-                // Alert neighbors:
-                
-                // if out of process sub board
-                    // Send asynchronous message
-                // else update cell;s neighbor count
-        
-        // Send global 'done' message
+        // Post non-blocking receives for all border halos from neighbor
 
-        int procsFinishedSending = 0;
-        bool canProceed = 0;
+        // Send non-blocking local border rows/cols in subgrid to neighbor
 
-        while(!canProceed) {
-            if
-        }
+        // update subgrid border rows when messages received
 
-        // Loop through message until buffer empty and done msg rcvd == p
-            // update cells neighbor count
-        
-        // Apply updates to sub board
+        // iterate through non-border cells of halo in sub grid
+            // If cell is active
+                // increment neighbor count locally only including border counts
+
+
+        // iterate through sub grid cells not bordering halo
+            // If cell is alive:
+                // Dies if neighbor count < 2 or > 3
+                // Lives if neighbor count == 2 or 3
+            // If cell is dead:
+                // Becomes alive if neighbor count == 3
+
+            // Apply results to 'next' array
+
+        // wait for all halo messages
+
+        // Count neighboring cells of border
+        // Update next subgrid for neighbor cells
+
+        // Swap pointers for next and subGrid arrays
+    
     }
+
 
     // deallocate neighbor count memory
 
 
-
+    
 
     if(!id) { // Clean up MPI environment
         printf("Results:");
     }
+    */
+
+    MPI_Finalize(); // Clean up MPI environment
 
     return 0;   
 }

@@ -60,7 +60,7 @@ int main(int argc, char* argv[]) {
     // Accumulate total valid IDs across processes
     MPI_Reduce(&processValidIds, &totalValidIds, 1, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD);
     
-    //MPI_Barrier(MPI_COMM_WORLD); // Wait for all processes to complete
+    MPI_Barrier(MPI_COMM_WORLD); // Wait for all processes to complete
 
     elapsedTime += MPI_Wtime(); // End benchmark time
 
